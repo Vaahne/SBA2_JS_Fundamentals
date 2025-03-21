@@ -4,8 +4,7 @@
 const CourseInfo = {
     id: 451,
     name: "Introduction to JavaScript"
-  };
-  
+  };  
   // The provided assignment group.
   const AssignmentGroup = {
     id: 12345,
@@ -32,8 +31,7 @@ const CourseInfo = {
         points_possible: 500
       }
     ]
-  };
-  
+  };  
   // The provided learner submission data.
   const LearnerSubmissions = [
     {
@@ -82,7 +80,7 @@ function getLearnerData(course, ag, submissions) {
     // here, we would process this data to achieve the desired result.
     
      //console.log("Max point for assignment 2 is ", getMaxPointsPerAssignment(2,ag)); 
-    //   let learnerScore = learnerScorePerAssignment(submissions,125);
+    //   let learnerScore = learnerScorePerAssignment(submissions,125,ag);
     //   console.log("score is ", learnerScore);
     //   let average = calculateAverageScores(learnerScore);
     //   console.log("Average of all assignments ",average);
@@ -90,22 +88,47 @@ function getLearnerData(course, ag, submissions) {
     //   const assignments = getAssignmentIds(course,ag);
     //   console.log("List of Assignment Ids ",assignments);
       
+
+    // getting all the learners 
       let learners = getAllLearners(submissions);
       let results = [];
+
       for(let learner of learners){
         let result = {};
         result.learner_id = learner;
-        let learnerScorePerAssignments = learnerScorePerAssignment(submissions,learner);
-        let averageScore = calculateAverageScores(learnerScorePerAssignments);
-        result.average = averageScore;
+        let learnerScorePerAssignments = learnerScorePerAssignment(submissions,learner,ag);
+        let averageOverallScore = calculateAverageScores(learnerScorePerAssignments);
+        
+        let averagePerAssignment = getAveragePerAssignmentPerLearner(learnerScorePerAssignments);
+
+        result.average = averageOverallScore;
+        result = appendResult(result,averagePerAssignment);
         results.push(result);
       }
-      console.log(results);
+     return results;
  }
   
   const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
-  
-//   console.log(result);
+  console.log("Final Result");
+  console.log(result);
+
+function appendResult(result,avgScores){
+    avgScores.forEach(sc => {
+        result[Object.keys(sc)[0]] = Object.values(sc)[0];
+    });
+    return result;
+}
+
+// average per assignment per learner
+function getAveragePerAssignmentPerLearner(learnerScorePerAssignment){
+    let something = [];
+    for(let el of learnerScorePerAssignment){
+        let sample = {};
+        sample[el.assignmentId] = el.score / el.maxPoints;        
+        something.push(sample);
+    }
+    return something;
+}
 
 
 // Get all the learner_ids
@@ -149,15 +172,14 @@ function calculateAverageScores(scorePerLearner){
 
 
 // get the score of a Learner per assignment with max score
-function learnerScorePerAssignment(submissions,learnerId){
+function learnerScorePerAssignment(submissions,learnerId,ag){
     let scores = [];
     submissions.forEach(learner =>{
         let scoreAndMaxScore = {};
-        console.log(learner.learner_id);
         if(learner.learner_id === learnerId){
             let assignmentId = learner.assignment_id; 
             let score = learner.submission.score;
-            let maxPoints = getMaxPointsPerAssignment(assignmentId,AssignmentGroup);
+            const maxPoints = getMaxPointsPerAssignment(assignmentId,ag);
             scoreAndMaxScore.assignmentId = assignmentId;
             scoreAndMaxScore.score = score;
             scoreAndMaxScore.maxPoints = maxPoints; 
@@ -172,11 +194,12 @@ function getMaxPointsPerAssignment(assignmentId,ag){
     const assignments = ag.assignments;   
     let maxpoints = 0;
     try{
-        assignments.forEach(el =>{
-            if(el.id === assignmentId){
-                maxpoints = el.points_possible;
+        for(let i of assignments){
+            if(i.id === assignmentId){
+                maxpoints = i.points_possible;
+                break;
             }
-        }) ; 
+        }
         if(maxpoints == 0){
             throw  new Error("Max Points cannot be 0");
         }
