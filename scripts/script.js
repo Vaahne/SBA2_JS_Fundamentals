@@ -78,31 +78,87 @@ const CourseInfo = {
     }
   ];
   
-  function getLearnerData(course, ag, submissions) {
+function getLearnerData(course, ag, submissions) {
     // here, we would process this data to achieve the desired result.
     
-    // console.log("Max point for assignment 1 is ", getMaxPointsPerAssignment(2)); 
-    let learnerScore = learnerScorePerAssignment(132);
-    console.log("score is ", learnerScore);
+     //console.log("Max point for assignment 2 is ", getMaxPointsPerAssignment(2,ag)); 
+    //   let learnerScore = learnerScorePerAssignment(submissions,125);
+    //   console.log("score is ", learnerScore);
+    //   let average = calculateAverageScores(learnerScore);
+    //   console.log("Average of all assignments ",average);
+      
+    //   const assignments = getAssignmentIds(course,ag);
+    //   console.log("List of Assignment Ids ",assignments);
+      
+      let learners = getAllLearners(submissions);
+      let results = [];
+      for(let learner of learners){
+        let result = {};
+        result.learner_id = learner;
+        let learnerScorePerAssignments = learnerScorePerAssignment(submissions,learner);
+        let averageScore = calculateAverageScores(learnerScorePerAssignments);
+        result.average = averageScore;
+        results.push(result);
+      }
+      console.log(results);
  }
   
   const result = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
   
 //   console.log(result);
-  
 
-// get the score of a Learner per assignment 
-// calculate the average of scores
-// get the average core per assignment for a learner
 
-function learnerScorePerAssignment(learnerId){
+// Get all the learner_ids
+function getAllLearners(submissions){
+    let learners = submissions.reduce((ar,sub)=>{
+        if(ar.indexOf(sub.learner_id)==-1){
+            ar.push(sub.learner_id);            
+        }
+        return ar;
+    },[]);
+    return learners;
+}
+
+
+// Get all assignment_ids
+function getAssignmentIds(course,assignmentGroup){
+    let assignmentIds = [];
+    try{
+        if(course.id === assignmentGroup.course_id){
+            assignmentGroup.assignments.forEach(el=>{assignmentIds.push(el.id);});
+        }else{
+            throw new Error("This assignment group doesnot belong to this group")
+        }
+    }catch(err){
+        console.error(err);
+    }
+    return assignmentIds;
+}
+
+
+// calculate the average of scores per learner
+function calculateAverageScores(scorePerLearner){
+    let average = 0 , scoreEarned = 0, maxPoints = 0;
+    for(let score of scorePerLearner){
+        scoreEarned += score.score
+        maxPoints += score.maxPoints;
+    }
+    average = scoreEarned / maxPoints;
+    return average;
+}
+
+
+// get the score of a Learner per assignment with max score
+function learnerScorePerAssignment(submissions,learnerId){
     let scores = [];
-    LearnerSubmissions.forEach(learner =>{
+    submissions.forEach(learner =>{
         let scoreAndMaxScore = {};
+        console.log(learner.learner_id);
         if(learner.learner_id === learnerId){
-           let assignmentId = learner.assignment_id; 
-           let score = learner.submission.score;
-            let maxPoints = getMaxPointsPerAssignment(assignmentId);
+            let assignmentId = learner.assignment_id; 
+            let score = learner.submission.score;
+            let maxPoints = getMaxPointsPerAssignment(assignmentId,AssignmentGroup);
+            scoreAndMaxScore.assignmentId = assignmentId;
             scoreAndMaxScore.score = score;
             scoreAndMaxScore.maxPoints = maxPoints; 
             scores.push(scoreAndMaxScore);           
@@ -112,8 +168,8 @@ function learnerScorePerAssignment(learnerId){
 }
 
 // get the max points of an assignment with ID 
-function getMaxPointsPerAssignment(assignmentId){
-    const assignments = AssignmentGroup.assignments;   
+function getMaxPointsPerAssignment(assignmentId,ag){
+    const assignments = ag.assignments;   
     let maxpoints = 0;
     try{
         assignments.forEach(el =>{
