@@ -118,6 +118,22 @@ function appendResult(result,avgScores){
     });
     return result;
 }
+//  Get the duedate by assignment
+function getDueDateByAssignment(assignmentId,ag){
+    const assignments = ag.assignments;   
+    let due_date = new Date();
+    try{
+        for(let i of assignments){
+            if(i.id === assignmentId){
+                due_date = i.due_at ;
+                break;
+            }
+        }
+    }catch(err){
+        console.error(err);
+    }
+    return due_date;
+}
 
 // average per assignment per learner
 function getAveragePerAssignmentPerLearner(learnerScorePerAssignment){
@@ -170,22 +186,44 @@ function calculateAverageScores(scorePerLearner){
     return average;
 }
 
-
+// checking the due date with current date/2025
+function checkDueDate(dueDate){
+    let today = new Date();
+    let date = JSON.stringify(today).split("T")[0];
+    date = date.slice(1,date.length-1);
+    let isTrue = (dueDate>date)?(true):(false);
+    return isTrue;
+}
 // get the score of a Learner per assignment with max score
 function learnerScorePerAssignment(submissions,learnerId,ag){
     let scores = [];
-    submissions.forEach(learner =>{
-        let scoreAndMaxScore = {};
-        if(learner.learner_id === learnerId){
-            let assignmentId = learner.assignment_id; 
-            let score = learner.submission.score;
-            const maxPoints = getMaxPointsPerAssignment(assignmentId,ag);
-            scoreAndMaxScore.assignmentId = assignmentId;
-            scoreAndMaxScore.score = score;
-            scoreAndMaxScore.maxPoints = maxPoints; 
-            scores.push(scoreAndMaxScore);           
-        }
-    });  
+    try{
+        submissions.forEach(learner =>{
+            let scoreAndMaxScore = {};
+            if(learner.learner_id === learnerId){
+                let assignmentId = learner.assignment_id; 
+                let score = learner.submission.score;
+                let submittedDate = learner.submission.submitted_at;
+                const maxPoints = getMaxPointsPerAssignment(assignmentId,ag);
+                let dueDate = getDueDateByAssignment(assignmentId,ag);
+                if(!checkDueDate(dueDate)){
+                        scoreAndMaxScore.assignmentId = assignmentId;
+                        scoreAndMaxScore.maxPoints = maxPoints; 
+                        // scoreAndMaxScore.score = score;
+                        if(submittedDate <= dueDate){
+                            scoreAndMaxScore.score = score;
+                        }else if(submittedDate > dueDate){
+                            const tenPercent = maxPoints/10;
+                            score -= tenPercent;
+                            scoreAndMaxScore.score = score;
+                        }
+                        scores.push(scoreAndMaxScore);           
+                }
+            }
+        }); 
+    }catch(err){
+        console.error(err);
+    } 
     return scores;
 }
 
