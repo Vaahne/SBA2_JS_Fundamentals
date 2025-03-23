@@ -141,7 +141,7 @@ function getAssignmentIds(course,assignmentGroup){
                     assignmentIds.push(el.id);
             });
         }else{
-            let ag_error = `This assignment group: ${assignmentGroup.id}, doesnot belong to this course `;
+            let ag_error = `This assignment group: ${assignmentGroup.id}, doesnot belong to this course ${course.id} `;
             if(!loggedErrors.has(ag_error)){
                 loggedErrors.add(ag_error);
                 throw new Error(ag_error);
@@ -230,7 +230,7 @@ function learnerScorePerAssignment(course,submissions,learnerId,ag){
                     throw new Error(`For Learner: ${learner.learner_id}, Score: ${score} is not a number`);
                      
                 if(score > maxPoints && maxPoints!=0 && (maxPoints === assignment.points_possible))
-                    throw new Error(`learner: ${learnerId}, score: ${score} kkk cannot be more than maxPoints: ${maxPoints}`);
+                    throw new Error(`learner: ${learnerId}, score: ${score}  cannot be more than maxPoints: ${maxPoints}`);
                                 
                 scoreAndMaxScore.assignmentId = assignmentId;
                 scoreAndMaxScore.maxPoints = maxPoints; 
