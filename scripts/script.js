@@ -15,7 +15,7 @@ const CourseInfo = {
         id: 1,
         name: "Declare a Variable",
         due_at: "2023-01-25",
-        points_possible: "50"
+        points_possible: 50
       },
       {
         id: 2,
@@ -75,9 +75,10 @@ const CourseInfo = {
     }
   ];
   
+  let loggedErrors = new Set();     //for logging errors and not repeating
+
 function getLearnerData(course, ag, submissions) {
     // here, we would process this data to achieve the desired result.
-     
       const learners = getAllLearners(submissions);   // getting all the learners 
       let results = [];
         
@@ -89,7 +90,7 @@ function getLearnerData(course, ag, submissions) {
             const averageOverallScore = calculateAverageScores(learnerAssignmentScores,learner);    // getting average score of all assignments    
            
 
-            result.avg = averageOverallScore;
+            result.avg = averageOverallScore;   // adding property avg to the result object
             result = appendResult(result,averagePerAssignment); // appending the average score per assignment to the result object
             results.push(result);       // storing the result of each learner in final result
       }
@@ -107,22 +108,6 @@ function appendResult(result,avgScores){
     return result;
 }
 
-//  returns the due_date by assignment_id
-function getDueDateByAssignment(assignmentId,ag){
-    const assignments = ag.assignments;   
-    let due_date = new Date();
-    try{
-        for(let i of assignments){
-            if(i.id === assignmentId){  
-                due_date = i.due_at ;
-                break;
-            }
-        }
-    }catch(err){
-        console.log(err.message);
-    }
-    return due_date;
-}
 
 // average per assignment per learner
 // returns an array of objects with [{assignment_id : avg_score}]
@@ -156,10 +141,15 @@ function getAssignmentIds(course,assignmentGroup){
                     assignmentIds.push(el.id);
             });
         }else{
-            throw new Error(`This assignment group: ${assignmentGroup.id}, doesnot belong to this course `)
+            let ag_error = `This assignment group: ${assignmentGroup.id}, doesnot belong to this course `;
+            if(!loggedErrors.has(ag_error)){
+                loggedErrors.add(ag_error);
+                throw new Error(ag_error);
+            }
         }
     }catch(err){
         console.log(err.message);
+        process.exit(1);
     }
     return assignmentIds;
 }
@@ -168,11 +158,12 @@ function calculateAverageScores(scorePerLearner,learner_id){
     let scoreEarned = 0, maxPoints = 0;
     for(let score of scorePerLearner){
         try{
-            if(!isNaN(score.score) && !isNaN(score.maxPoints)){
-                scoreEarned += parseInt(score.score);
-                maxPoints += parseInt(score.maxPoints);
-            }else 
-                throw new Error(`For Learner: ${learner_id}, Score: ${score.score}  is not a number `);        
+            if(isNaN(score.score) || isNaN(score.maxPoints))
+                throw new Error(`For Learner: ${learner_id}, Score: ${score.score}  is not a number `);
+            
+            scoreEarned += parseInt(score.score);
+            maxPoints += parseInt(score.maxPoints);
+           
         }catch(err){
             console.log(err.message);
         }
@@ -193,7 +184,6 @@ function checkDueDate(dueDate){
 function learnerScorePerAssignment(course,submissions,learnerId,ag){
     let scores = [];
     try{
-        // submissions.forEach(learner =>{
         for(let learner of submissions){
 
             if(learner.learner_id != learnerId) continue; 
@@ -205,32 +195,42 @@ function learnerScorePerAssignment(course,submissions,learnerId,ag){
                 let score = learner.submission.score;
                 const submittedDate = learner.submission.submitted_at;
 
-                if(!validateAssignment(course,assignmentId)) 
+                if(!validateAssignment(course,assignmentId,ag,learner)) 
                     throw new Error(`Assignment Id : ${assignmentId},  submitted by learner : ${learnerId} ,doesnot exist in the course`);
 
                 // const maxPoints = getMaxPointsPerAssignment(course,assignmentId,ag);
                 
                 const assignment = ag.assignments.find(assignment => (assignment.id == assignmentId));
-                const maxPoints = assignment.points_possible;
+                const maxPoints = Number(assignment.points_possible);
                 
                 if(assignment == null)
                     throw new Error (`Assignment: ${assignmentId} , doesnot belong to this course`);
-            
-                if(isNaN(maxPoints))
-                    throw new Error(`Assignment: ${assignmentId}, Possible points:${maxPoints} is not a number`);
-                if(maxPoints == 0)
-                    throw new Error(`Assignment: ${assignmentId}, Possible points cannot be 0`);
+                
+                if(Number.isNaN(maxPoints) || ((typeof maxPoints != 'number') && maxPoints !== assignment.points_possible)){
+                    let notANumMax = `Assignment: ${assignmentId}, Possible points:${assignment.points_possible} is not a number`;
+                    
+                    if(!loggedErrors.has(notANumMax)){
+                        loggedErrors.add(notANumMax);
+                        throw new Error(notANumMax);
+                    }
+                }
+                if(maxPoints <= 0){
+                    let divideByZero = `Assignment: ${assignmentId}, Possible points cannot be 0`;
+                    if(!loggedErrors.has(divideByZero)){
+                        loggedErrors.add(divideByZero);
+                        throw new Error(divideByZero);
+                    }
+                }
 
                 const dueDate = assignment.due_at;
-                // let dueDate = getDueDateByAssignment(assignmentId,ag);
                 
                 if(checkDueDate(dueDate)) continue;  //checking due_date is pass current date or not 
                 
-                if(isNaN(score) || isNaN(maxPoints))    // checks if score or maxPoints not a number 
-                    throw new Error(`For Learner: ${learner.learner_id}, Score: ${score}  is not a number`);
+                if(isNaN(score)) // check if score is a number or not
+                    throw new Error(`For Learner: ${learner.learner_id}, Score: ${score} is not a number`);
                      
-                if(score > maxPoints && maxPoints!=0 && !isNaN(maxPoints))
-                    throw new Error(`learner: ${learnerId}, score: ${score} cannot be more than maxPoints: ${maxPoints}`);
+                if(score > maxPoints && maxPoints!=0 && (maxPoints === assignment.points_possible))
+                    throw new Error(`learner: ${learnerId}, score: ${score} kkk cannot be more than maxPoints: ${maxPoints}`);
                                 
                 scoreAndMaxScore.assignmentId = assignmentId;
                 scoreAndMaxScore.maxPoints = maxPoints; 
@@ -254,40 +254,16 @@ function learnerScorePerAssignment(course,submissions,learnerId,ag){
     } 
     return scores;
 }
-// function scoreCheck(score,maxPoints){
-//     if(score > maxPoints && maxPoints!=0)
-//         throw new Error("Score cannot be more than max points");
-//     return true;
-// }
 
 // check if assignment belongs to assignment group or not
-function validateAssignment(course,assignment_id){
-    if(getAssignmentIds(course,AssignmentGroup).indexOf(assignment_id) == -1)
-        return false;
-    return true;
-}
-
-
-// get the max points of an assignment with ID 
-function getMaxPointsPerAssignment(course,assignmentId,ag){
-    const assignments = ag.assignments;   
-    let maxpoints = -1;
-    try{
-        if(!validateAssignment(course,assignmentId))
-            throw new Error(`Assignment: ${assignmentId}, is not part of this course ${course.id}`);
-   
-        for(let i of assignments){
-            if(i.id === assignmentId){
-                if(isNaN(i.points_possible))
-                    throw new Error(`Assignment: ${assignmentId} has Possible_points :${i.points_possible} in not a number`);
-                maxpoints = i.points_possible;    
-                break;
-            }
-        }
-        if(maxpoints <= 0)
-            throw new Error(`Assignment: ${assignmentId}, Max Points can not be 0 `);
-    }catch(err){
-        console.log(err.message);
+function validateAssignment(course,assignment_id,ag,learner){
+    if(getAssignmentIds(course,ag).indexOf(assignment_id) == -1){
+        let assignment_error = `Learner: ${learner.learner_id} Submitted Assignment:${assignment_id} doesnt belong to the course`;
+        
+        if(!loggedErrors.has(assignment_error)){
+            loggedErrors.add(assignment_error);
+            throw new Error(assignment_error);
+        }        
     }
-    return maxpoints;
+    return true;
 }
