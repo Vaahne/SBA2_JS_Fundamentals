@@ -1,27 +1,17 @@
 ### Student Overall Average Scores and Per Assignment Score
 
 ## Basic Functionality
- The program returns the result for each learner with overall average, and average per assignment.
+ The program calculates each learner's overall average score and average per assignment while handling errors gracefully.
 
-## If maxPoints is 0 for any assignment  
-The program won't include that assignment in the average calculation.  
-The program will throw an error but will continue processing other assignments.  
+## Handling Invalid Data  
+ If maxPoints is 0, the assignment is excluded from the average calculation, and an error is logged.
+ If maxPoints or score is not a number, an error is logged, but valid assignments are still processed.
+ If the score exceeds maxPoints, an error is logged, and processing continues.
+ If an assignment is not part of the course, an error is logged, and processing continues.
 
-## If the assignment submitted by the learner is not part of the course  
-The program will throw an error and continue processing other assignments.  
-
-## If the score exceeds maxPoints  
-The program will throw an error but will continue processing other assignments.  
-
-## If maxPoints or score is not a number  
-The program will throw an error.  
-The program will continue processing other assignments and calculate the average for valid ones only.  
-
-## If an assignment is submitted after the due date  
-The program will deduct a 10% penalty from the earned score.  
-
-## If the due date is in the future  
-The program won't include that assignment in the average calculation.  
+## Late Submissions and Future Due Dates  
+ Late submissions incur a 10% penalty on the earned score.
+ Future-dated assignments are excluded from the average calculation.
 
 ## What could have been done differently during the planning stages to improve execution?  
-I would have implemented validations first, followed by defining the requirements, to ensure smoother execution.  
+ Prioritizing validations first, followed by defining the requirements, to ensure smoother execution.  
